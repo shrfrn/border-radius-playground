@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Link as LinkIcon, Unlink } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
@@ -102,6 +102,41 @@ const DEFAULT_RADII_PCT = { tl: [30, 40], tr: [20, 3], br: [25, 3], bl: [20, 27]
 const DEFAULT_UNITS = { tl: ['%', '%'], tr: ['px', 'px'], br: ['px', 'px'], bl: ['px', 'px'] }
 const DEFAULT_LINKED = { tl: false, tr: false, br: false, bl: false }
 
+const STORAGE_KEY = 'border-radius-app-state'
+
+const INITIAL_RADII_PX = { tl: [90, 120], tr: [349, 153], br: [203, 151], bl: [173, 173] }
+const INITIAL_RADII_PCT = { tl: [30, 40], tr: [87, 51], br: [51, 50], bl: [43, 58] }
+const INITIAL_UNITS = { tl: ['%', '%'], tr: ['px', 'px'], br: ['px', 'px'], bl: ['px', 'px'] }
+
+function loadState() {
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY)
+		if (!raw) return null
+		const data = JSON.parse(raw)
+		const corners = ['tl', 'tr', 'br', 'bl']
+		const has = (o, k) => o && typeof o === 'object' && Array.isArray(o[k])
+		if (!data.radiiPx || !corners.every(c => has(data.radiiPx, c))) return null
+		if (!data.radiiPct || !corners.every(c => has(data.radiiPct, c))) return null
+		if (!data.units || !corners.every(c => has(data.units, c))) return null
+		return {
+			radiiPx: { ...DEFAULT_RADII_PX, ...data.radiiPx },
+			radiiPct: { ...DEFAULT_RADII_PCT, ...data.radiiPct },
+			units: { ...DEFAULT_UNITS, ...data.units },
+			linked: { ...DEFAULT_LINKED, ...data.linked },
+			mode: typeof data.mode === 'number' && data.mode >= 1 && data.mode <= 4 ? data.mode : 4,
+			shape: data.shape === 'square' ? 'square' : 'rectangle',
+		}
+	} catch {
+		return null
+	}
+}
+
+function saveState(state) {
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+	} catch (_) {}
+}
+
 const PRESETS = [
 	{ name: 'Circle / Ellipse', mode: 1, radiiPx: { tl: [200, 150], tr: [200, 150], br: [200, 150], bl: [200, 150] }, radiiPct: { tl: [50, 50], tr: [50, 50], br: [50, 50], bl: [50, 50] }, units: { tl: ['%', '%'], tr: ['%', '%'], br: ['%', '%'], bl: ['%', '%'] } },
 	{ name: 'Pill', mode: 1, radiiPx: { tl: [999, 999], tr: [999, 999], br: [999, 999], bl: [999, 999] }, radiiPct: { tl: [100, 100], tr: [100, 100], br: [100, 100], bl: [100, 100] }, units: { tl: ['px', 'px'], tr: ['px', 'px'], br: ['px', 'px'], bl: ['px', 'px'] } },
@@ -126,15 +161,74 @@ function getDisplayRadii(radiiPx, radiiPct, units) {
 	return out
 }
 
+function CssRuleDisplay({ borderRadiusString }) {
+	const hasSlash = borderRadiusString.includes(' / ')
+	const parts = hasSlash ? borderRadiusString.split(' / ') : null
+	const valueCount = hasSlash ? 0 : borderRadiusString.trim().split(/\s+/).length
+
+	if (valueCount === 1 || valueCount === 2) {
+		return (
+			<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left">
+				<span className="text-slate-200">border-radius: </span>
+				<span className="text-yellow-200 font-bold">{borderRadiusString};</span>
+			</p>
+		)
+	}
+
+	if (valueCount === 3) {
+		return (
+			<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
+				<span className="text-slate-200">border-radius:</span>
+				{'\n'}
+				<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
+			</p>
+		)
+	}
+
+	return (
+		<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
+			<span className="text-slate-200">border-radius:</span>
+			{'\n'}
+			{parts ? (
+				<>
+					<span className="text-yellow-200 font-bold">{'    '}{parts[0]} / </span>
+					{'\n'}
+					<span className="text-yellow-200 font-bold">{'        '}{parts[1]};</span>
+				</>
+			) : (
+				<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
+			)}
+		</p>
+	)
+}
+
 // --- Main App Component ---
 
+function getInitialState() {
+	const saved = loadState()
+	if (saved) return saved
+	return {
+		radiiPx: { ...DEFAULT_RADII_PX, ...INITIAL_RADII_PX },
+		radiiPct: { ...DEFAULT_RADII_PCT, ...INITIAL_RADII_PCT },
+		units: { ...DEFAULT_UNITS, ...INITIAL_UNITS },
+		linked: { ...DEFAULT_LINKED },
+		mode: 4,
+		shape: 'rectangle',
+	}
+}
+
 function App() {
-	const [mode, setMode] = useState(4)
-	const [radiiPx, setRadiiPx] = useState(DEFAULT_RADII_PX)
-	const [radiiPct, setRadiiPct] = useState(DEFAULT_RADII_PCT)
-	const [units, setUnits] = useState(DEFAULT_UNITS)
-	const [linked, setLinked] = useState(DEFAULT_LINKED)
-	const [shape, setShape] = useState('rectangle')
+	const [initial] = useState(getInitialState)
+	const [mode, setMode] = useState(initial.mode)
+	const [radiiPx, setRadiiPx] = useState(initial.radiiPx)
+	const [radiiPct, setRadiiPct] = useState(initial.radiiPct)
+	const [units, setUnits] = useState(initial.units)
+	const [linked, setLinked] = useState(initial.linked)
+	const [shape, setShape] = useState(initial.shape)
+
+	useEffect(() => {
+		saveState({ radiiPx, radiiPct, units, linked, mode, shape })
+	}, [radiiPx, radiiPct, units, linked, mode, shape])
 
 	const displayRadii = getDisplayRadii(radiiPx, radiiPct, units)
 
@@ -290,11 +384,7 @@ function App() {
 					>
 						<div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
 						<div className="z-10 bg-black/30 backdrop-blur-lg px-6 py-4 rounded-2xl border border-white/20 max-w-[85%]">
-							<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left">
-								<span className="text-slate-200">border-radius:</span>
-								<br />
-								<span className="text-yellow-200 font-bold">{borderRadiusString};</span>
-							</p>
+							<CssRuleDisplay borderRadiusString={borderRadiusString} />
 						</div>
 					</div>
 				</div>
