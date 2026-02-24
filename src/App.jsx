@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link as LinkIcon, Unlink, DraftingCompass } from 'lucide-react'
+import { Link as LinkIcon, Unlink, DraftingCompass, Copy } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
 
@@ -161,7 +161,15 @@ function getDisplayRadii(radiiPx, radiiPct, units) {
 	return out
 }
 
+const OVERLAY_ACCENT = '#00e5ff'
+const OVERLAY_DEFAULT_STROKE = 'rgba(255,255,255,0.9)'
+const OVERLAY_DEFAULT_FILL = 'rgba(255,255,255,0.15)'
+const RADII_FONT_SIZE = 14
+const DIM_TICK = 6
+const DIM_LINE_GAP = 32 // gap in line for centered text
+
 function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl: true, tr: true, br: true, bl: true } }) {
+	const [hoveredCorner, setHoveredCorner] = useState(null)
 	const toPx = (val, unit, dim) => (unit === '%' ? (val / 100) * dim : val)
 	const isSquare = width === height
 	const getCornerData = c => {
@@ -175,9 +183,7 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 		return { hPx, vPx, hLabel, vLabel, showBothRadii: sameVal && !isSquare }
 	}
 
-	const strokeColor = 'rgba(255,255,255,0.9)'
-	const fillColor = 'rgba(255,255,255,0.15)'
-	const vLabelGap = 14 // fixed gap between vertical radius line and label (edge-to-edge)
+	const vLabelGap = 5
 
 	const cornerConfig = [
 		{ c: 'tl', cx: d => d.hPx, cy: d => d.vPx, hLine: d => ({ x1: d.hPx, y1: d.vPx, x2: 0, y2: d.vPx }), vLine: d => ({ x1: d.hPx, y1: d.vPx, x2: d.hPx, y2: 0 }), hLabel: d => ({ x: d.hPx / 2, y: d.vPx - 6 }), vLabel: d => ({ x: d.hPx + vLabelGap, y: d.vPx / 2, anchor: 'start' }) },
@@ -186,8 +192,75 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 		{ c: 'bl', cx: d => d.hPx, cy: d => height - d.vPx, hLine: d => ({ x1: d.hPx, y1: height - d.vPx, x2: 0, y2: height - d.vPx }), vLine: d => ({ x1: d.hPx, y1: height - d.vPx, x2: d.hPx, y2: height }), hLabel: d => ({ x: d.hPx / 2, y: height - d.vPx + 14 }), vLabel: d => ({ x: d.hPx + vLabelGap, y: height - d.vPx / 2, anchor: 'start' }) },
 	]
 
+	function getDimSidesForCorner(c) {
+		const u = units[c] ?? ['px', 'px']
+		const widthLabel = u[0] === '%' ? '100%' : `${width}px`
+		const heightLabel = u[1] === '%' ? '100%' : `${height}px`
+		const edgeOffset = 8
+		return {
+			tl: [
+				{ type: 'top', x1: 0, y: edgeOffset, x2: width, tickDy: DIM_TICK, cx: width / 2, label: widthLabel },
+				{ type: 'left', y1: 0, x: edgeOffset, y2: height, tickDx: DIM_TICK, cy: height / 2, label: heightLabel, textX: edgeOffset, textAnchor: 'middle' },
+			],
+			tr: [
+				{ type: 'top', x1: 0, y: edgeOffset, x2: width, tickDy: DIM_TICK, cx: width / 2, label: widthLabel },
+				{ type: 'right', y1: 0, x: width - edgeOffset, y2: height, tickDx: -DIM_TICK, cy: height / 2, label: heightLabel, textX: width - edgeOffset, textAnchor: 'middle' },
+			],
+			br: [
+				{ type: 'bottom', x1: 0, y: height - edgeOffset, x2: width, tickDy: -DIM_TICK, cx: width / 2, label: widthLabel },
+				{ type: 'right', y1: 0, x: width - edgeOffset, y2: height, tickDx: -DIM_TICK, cy: height / 2, label: heightLabel, textX: width - edgeOffset, textAnchor: 'middle' },
+			],
+			bl: [
+				{ type: 'bottom', x1: 0, y: height - edgeOffset, x2: width, tickDy: -DIM_TICK, cx: width / 2, label: widthLabel },
+				{ type: 'left', y1: 0, x: edgeOffset, y2: height, tickDx: DIM_TICK, cy: height / 2, label: heightLabel, textX: edgeOffset, textAnchor: 'middle' },
+			],
+		}[c]
+	}
+
+	function renderSideDimension(side) {
+		const stroke = OVERLAY_ACCENT
+		const isHoriz = side.type === 'top' || side.type === 'bottom'
+		const half = DIM_LINE_GAP / 2
+		if (isHoriz) {
+			return (
+				<g key={side.type}>
+					<line x1={side.x1} y1={side.y} x2={side.cx - half} y2={side.y} stroke={stroke} strokeWidth={1.2} />
+					<line x1={side.cx + half} y1={side.y} x2={side.x2} y2={side.y} stroke={stroke} strokeWidth={1.2} />
+					<line x1={side.x1} y1={side.y} x2={side.x1} y2={side.y + side.tickDy} stroke={stroke} strokeWidth={1.2} />
+					<line x1={side.x2} y1={side.y} x2={side.x2} y2={side.y + side.tickDy} stroke={stroke} strokeWidth={1.2} />
+					<text x={side.cx} y={side.y} dy="0.35em" textAnchor="middle" fill={stroke} fontSize={11} fontFamily="monospace" fontWeight="bold">{side.label}</text>
+				</g>
+			)
+		}
+		return (
+			<g key={side.type}>
+				<line x1={side.x} y1={side.y1} x2={side.x} y2={side.cy - half} stroke={stroke} strokeWidth={1.2} />
+				<line x1={side.x} y1={side.cy + half} x2={side.x} y2={side.y2} stroke={stroke} strokeWidth={1.2} />
+				<line x1={side.x} y1={side.y1} x2={side.x + side.tickDx} y2={side.y1} stroke={stroke} strokeWidth={1.2} />
+				<line x1={side.x} y1={side.y2} x2={side.x + side.tickDx} y2={side.y2} stroke={stroke} strokeWidth={1.2} />
+				<text
+					x={side.textX ?? side.x}
+					y={side.cy}
+					dy="0.35em"
+					textAnchor={side.textAnchor ?? 'middle'}
+					fill={stroke}
+					fontSize={11}
+					fontFamily="monospace"
+					fontWeight="bold"
+					transform={`rotate(-90 ${side.textX ?? side.x} ${side.cy})`}
+				>
+					{side.label}
+				</text>
+			</g>
+		)
+	}
+
 	return (
-		<svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+		<svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+			{/* Side dimensions on hover – pointer-events wrapper so only corners receive hover */}
+			<g style={{ pointerEvents: 'none', opacity: hoveredCorner ? 1 : 0, transition: 'opacity 0.2s ease-out' }}>
+				{hoveredCorner && getDimSidesForCorner(hoveredCorner)?.map(renderSideDimension)}
+			</g>
 			{cornerConfig.map(({ c, cx, cy, hLine, vLine, hLabel, vLabel }) => {
 				if (!visibleCorners[c]) return null
 				const d = getCornerData(c)
@@ -196,19 +269,27 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 				const vl = vLine(d)
 				const hPos = hLabel(d)
 				const vPos = vLabel(d)
+				const isHovered = hoveredCorner === c
+				const strokeColor = isHovered ? OVERLAY_ACCENT : OVERLAY_DEFAULT_STROKE
+				const fillColor = isHovered ? 'rgba(0,229,255,0.12)' : OVERLAY_DEFAULT_FILL
 				return (
-					<g key={c}>
+					<g
+						key={c}
+						style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+						onMouseEnter={() => setHoveredCorner(c)}
+						onMouseLeave={() => setHoveredCorner(null)}
+					>
 						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
 						{d.hPx > 0 && (d.showBothRadii || d.hPx !== d.vPx) && (
 							<>
-								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={strokeColor} strokeWidth={1} />
-								<text x={hPos.x} y={hPos.y} textAnchor="middle" fill={strokeColor} fontSize={10} fontFamily="monospace" fontWeight="bold">{d.hLabel}</text>
+								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={strokeColor} strokeWidth={1.2} />
+								<text x={hPos.x} y={hPos.y} textAnchor="middle" fill={strokeColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.hLabel}</text>
 							</>
 						)}
 						{d.vPx > 0 && (d.showBothRadii || d.hPx !== d.vPx || isSquare) && (
 							<>
-								<line x1={vl.x1} y1={vl.y1} x2={vl.x2} y2={vl.y2} stroke={strokeColor} strokeWidth={1} />
-								<text x={vPos.x} y={vPos.y} textAnchor={vPos.anchor ?? 'middle'} fill={strokeColor} fontSize={10} fontFamily="monospace" fontWeight="bold">{d.vLabel}</text>
+								<line x1={vl.x1} y1={vl.y1} x2={vl.x2} y2={vl.y2} stroke={strokeColor} strokeWidth={1.2} />
+								<text x={vPos.x} y={vPos.y} textAnchor={vPos.anchor ?? 'middle'} fill={strokeColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.vLabel}</text>
 							</>
 						)}
 					</g>
@@ -218,44 +299,94 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 	)
 }
 
+function getCssSnippetText(borderRadiusString) {
+	const hasSlash = borderRadiusString.includes(' / ')
+	const parts = hasSlash ? borderRadiusString.split(' / ') : null
+	const valueCount = hasSlash ? 0 : borderRadiusString.trim().split(/\s+/).length
+	const isSinglePair = hasSlash && parts?.length === 2 && !parts[0].trim().includes(' ') && !parts[1].trim().includes(' ')
+	const isTwoPairs = hasSlash && parts?.length === 2 && parts[0].trim().split(/\s+/).length === 2 && parts[1].trim().split(/\s+/).length === 2
+	if (valueCount === 1 || valueCount === 2) return `border-radius: ${borderRadiusString};`
+	if (isSinglePair || isTwoPairs || valueCount === 3) return `border-radius:\n    ${borderRadiusString};`
+	if (parts?.length === 2) return `border-radius:\n    ${parts[0]} / \n        ${parts[1]};`
+	return `border-radius: ${borderRadiusString};`
+}
+
 function CssRuleDisplay({ borderRadiusString }) {
 	const hasSlash = borderRadiusString.includes(' / ')
 	const parts = hasSlash ? borderRadiusString.split(' / ') : null
 	const valueCount = hasSlash ? 0 : borderRadiusString.trim().split(/\s+/).length
+	const isSinglePair = hasSlash && parts?.length === 2 && !parts[0].trim().includes(' ') && !parts[1].trim().includes(' ')
+	const isTwoPairs = hasSlash && parts?.length === 2 && parts[0].trim().split(/\s+/).length === 2 && parts[1].trim().split(/\s+/).length === 2
+
+	const onCopy = () => navigator.clipboard.writeText(getCssSnippetText(borderRadiusString))
+
+	const copyButton = (
+		<button
+			type="button"
+			onClick={onCopy}
+			className="absolute top-3 right-3 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+			title="Copy CSS"
+			aria-label="Copy CSS"
+		>
+			<Copy size={18} />
+		</button>
+	)
 
 	if (valueCount === 1 || valueCount === 2) {
 		return (
-			<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left">
-				<span className="text-slate-200">border-radius: </span>
-				<span className="text-yellow-200 font-bold">{borderRadiusString};</span>
-			</p>
+			<div className="relative pr-12">
+				{copyButton}
+				<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left">
+					<span className="text-slate-200">border-radius: </span>
+					<span className="text-yellow-200 font-bold">{borderRadiusString};</span>
+				</p>
+			</div>
+		)
+	}
+
+	if (isSinglePair || isTwoPairs) {
+		return (
+			<div className="relative pr-12">
+				{copyButton}
+				<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
+					<span className="text-slate-200">border-radius:</span>
+					{'\n'}
+					<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
+				</p>
+			</div>
 		)
 	}
 
 	if (valueCount === 3) {
 		return (
-			<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
-				<span className="text-slate-200">border-radius:</span>
-				{'\n'}
-				<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
-			</p>
+			<div className="relative pr-12">
+				{copyButton}
+				<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
+					<span className="text-slate-200">border-radius:</span>
+					{'\n'}
+					<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
+				</p>
+			</div>
 		)
 	}
 
 	return (
-		<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
-			<span className="text-slate-200">border-radius:</span>
-			{'\n'}
-			{parts ? (
-				<>
-					<span className="text-yellow-200 font-bold">{'    '}{parts[0]} / </span>
-					{'\n'}
-					<span className="text-yellow-200 font-bold">{'        '}{parts[1]};</span>
-				</>
-			) : (
-				<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
-			)}
-		</p>
+		<div className="relative pr-12">
+			{copyButton}
+			<p className="font-mono text-xs md:text-sm leading-relaxed break-words text-left whitespace-pre">
+				<span className="text-slate-200">border-radius:</span>
+				{'\n'}
+				{parts ? (
+					<>
+						<span className="text-yellow-200 font-bold">{'    '}{parts[0]} / </span>
+						{'\n'}
+						<span className="text-yellow-200 font-bold">{'        '}{parts[1]};</span>
+					</>
+				) : (
+					<span className="text-yellow-200 font-bold">{'    '}{borderRadiusString};</span>
+				)}
+			</p>
+		</div>
 	)
 }
 
@@ -450,9 +581,9 @@ function App() {
 
 				<div className={`flex flex-col items-center gap-0 transition-all duration-300 ease-out ${shape === 'square' ? 'w-[320px]' : 'w-[500px]'}`}>
 					<div className={`relative transition-all duration-300 ease-out ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
-						<div className={`absolute inset-0 border border-slate-200 flex items-center justify-center bg-white shadow-inner overflow-hidden rounded-none ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
+						<div className={`absolute inset-0 border border-slate-200 flex items-center justify-center bg-white shadow-inner overflow-visible rounded-none ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
 							<div
-								className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl transition-all duration-300 ease-out relative overflow-hidden"
+								className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl transition-all duration-300 ease-out relative overflow-visible"
 								style={{ borderRadius: borderRadiusString }}
 							>
 								<div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
