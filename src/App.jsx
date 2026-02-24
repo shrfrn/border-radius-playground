@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link as LinkIcon, Unlink, DraftingCompass, Copy } from 'lucide-react'
+import { Link as LinkIcon, Unlink, DraftingCompass, Copy, Check } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
 
@@ -312,23 +312,28 @@ function getCssSnippetText(borderRadiusString) {
 }
 
 function CssRuleDisplay({ borderRadiusString }) {
+	const [copied, setCopied] = useState(false)
 	const hasSlash = borderRadiusString.includes(' / ')
 	const parts = hasSlash ? borderRadiusString.split(' / ') : null
 	const valueCount = hasSlash ? 0 : borderRadiusString.trim().split(/\s+/).length
 	const isSinglePair = hasSlash && parts?.length === 2 && !parts[0].trim().includes(' ') && !parts[1].trim().includes(' ')
 	const isTwoPairs = hasSlash && parts?.length === 2 && parts[0].trim().split(/\s+/).length === 2 && parts[1].trim().split(/\s+/).length === 2
 
-	const onCopy = () => navigator.clipboard.writeText(getCssSnippetText(borderRadiusString))
+	const onCopy = () => {
+		navigator.clipboard.writeText(getCssSnippetText(borderRadiusString))
+		setCopied(true)
+		setTimeout(() => setCopied(false), 400)
+	}
 
 	const copyButton = (
 		<button
 			type="button"
 			onClick={onCopy}
-			className="absolute top-3 right-3 p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+			className="absolute -top-1.5 right-0 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors duration-150 active:scale-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
 			title="Copy CSS"
 			aria-label="Copy CSS"
 		>
-			<Copy size={18} />
+			{copied ? <Check size={18} className="text-emerald-400" /> : <Copy size={18} />}
 		</button>
 	)
 
