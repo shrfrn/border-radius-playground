@@ -39,7 +39,7 @@ const CornerControls = ({ corner, label, positionClass, isVisible, radii, units,
 				<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>
 				<button
 					onClick={() => onToggleLink(corner)}
-					className={`p-1.5 rounded transition-colors ${isLinked ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-100 border border-slate-100'}`}
+					className={`p-1.5 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${isLinked ? 'bg-indigo-600 text-white shadow-md focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'text-slate-400 hover:bg-slate-100 border border-slate-100 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
 					title={isLinked ? 'Unlink Horizontal/Vertical' : 'Link Horizontal/Vertical'}
 				>
 					{isLinked ? <LinkIcon size={14} /> : <Unlink size={14} />}
@@ -668,10 +668,10 @@ function App() {
 								key={s}
 								type="button"
 								onClick={() => setShape(s)}
-								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all capitalize ${
+								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all capitalize focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
 									shape === s
-										? 'bg-indigo-600 text-white border-indigo-600'
-										: 'text-slate-600 bg-white border-slate-200 hover:bg-indigo-50 hover:border-indigo-200'
+										? 'bg-indigo-600 text-white border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600'
+										: 'text-slate-600 bg-white border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'
 								}`}
 								aria-pressed={shape === s}
 								aria-label={`Shape: ${s}`}
@@ -686,10 +686,10 @@ function App() {
 								key={v}
 								type="button"
 								onClick={() => setMode(v)}
-								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all ${
+								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
 									mode === v
-										? 'bg-indigo-600 text-white border-indigo-600'
-										: 'text-slate-600 bg-white border-slate-200 hover:bg-indigo-50 hover:border-indigo-200'
+										? 'bg-indigo-600 text-white border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600'
+										: 'text-slate-600 bg-white border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'
 								}`}
 							>
 								{v} {v === 1 ? 'Value' : 'Values'}
@@ -728,7 +728,7 @@ function App() {
 									key={corner}
 									type="button"
 									onClick={() => toggleOverlay(corner)}
-									className={`absolute ${pos} p-2 rounded-full transition-colors shadow-md z-10 ${overlayCorners[corner] ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
+									className={`absolute ${pos} p-2 rounded-full transition-colors shadow-md z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${overlayCorners[corner] ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
 									title={overlayCorners[corner] ? 'Hide corner curve' : 'Show corner curve'}
 								>
 									<DraftingCompass size={16} />
@@ -741,7 +741,7 @@ function App() {
 								<button
 									type="button"
 									onClick={toggleAllOverlays}
-									className={`absolute -top-[45px] left-[13px] flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors shadow-md z-10 ${allOn ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
+									className={`absolute -top-[45px] left-[13px] flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors shadow-md z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${allOn ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
 									title={allOn ? 'Hide all corner curves' : 'Show all corner curves'}
 								>
 									<DraftingCompass size={16} />
@@ -849,7 +849,7 @@ function App() {
 											<button
 												type="button"
 												onClick={(e) => requestDeleteUserPreset(preset.id, e)}
-												className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+												className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 focus:opacity-100 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-700"
 												aria-label={`Delete preset ${preset.name}`}
 											>
 												<X size={12} strokeWidth={2.5} />
