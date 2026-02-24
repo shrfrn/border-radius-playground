@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link as LinkIcon, Unlink, DraftingCompass, Copy, Check } from 'lucide-react'
+import { Link as LinkIcon, Unlink, DraftingCompass, Copy, Check, X, Save } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
 
@@ -103,6 +103,27 @@ const DEFAULT_UNITS = { tl: ['%', '%'], tr: ['px', 'px'], br: ['px', 'px'], bl: 
 const DEFAULT_LINKED = { tl: false, tr: false, br: false, bl: false }
 
 const STORAGE_KEY = 'border-radius-app-state'
+const USER_PRESETS_STORAGE_KEY = 'border-radius-user-presets'
+
+function loadUserPresets() {
+	try {
+		const raw = localStorage.getItem(USER_PRESETS_STORAGE_KEY)
+		if (!raw) return []
+		const data = JSON.parse(raw)
+		if (!Array.isArray(data)) return []
+		const corners = ['tl', 'tr', 'br', 'bl']
+		const has = (o, k) => o && typeof o === 'object' && Array.isArray(o[k])
+		return data.filter(p => p && p.id && p.name && typeof p.mode === 'number' && has(p, 'radiiPx') && has(p, 'radiiPct') && has(p, 'units'))
+	} catch {
+		return []
+	}
+}
+
+function saveUserPresets(presets) {
+	try {
+		localStorage.setItem(USER_PRESETS_STORAGE_KEY, JSON.stringify(presets))
+	} catch (_) {}
+}
 
 const INITIAL_RADII_PX = { tl: [90, 120], tr: [349, 153], br: [203, 151], bl: [173, 173] }
 const INITIAL_RADII_PCT = { tl: [30, 40], tr: [87, 51], br: [51, 50], bl: [43, 58] }
@@ -419,6 +440,7 @@ function App() {
 	const [linked, setLinked] = useState(initial.linked)
 	const [shape, setShape] = useState(initial.shape)
 	const [overlayCorners, setOverlayCorners] = useState({ tl: true, tr: true, br: true, bl: true })
+	const [userPresets, setUserPresets] = useState(loadUserPresets)
 
 	const toggleOverlay = useCallback((corner) => {
 		setOverlayCorners(prev => ({ ...prev, [corner]: !prev[corner] }))
@@ -433,6 +455,10 @@ function App() {
 		saveState({ radiiPx, radiiPct, units, linked, mode, shape })
 	}, [radiiPx, radiiPct, units, linked, mode, shape])
 
+	useEffect(() => {
+		saveUserPresets(userPresets)
+	}, [userPresets])
+
 	const displayRadii = getDisplayRadii(radiiPx, radiiPct, units)
 
 	const applyPreset = useCallback((preset) => {
@@ -440,6 +466,28 @@ function App() {
 		setRadiiPct({ ...DEFAULT_RADII_PCT, ...preset.radiiPct })
 		setUnits({ ...DEFAULT_UNITS, ...preset.units })
 		setMode(preset.mode ?? 4)
+	}, [])
+
+	const saveCurrentAsPreset = useCallback(() => {
+		const defaultName = `Preset ${userPresets.length + 1}`
+		const raw = window.prompt('Name for preset:', defaultName)
+		if (raw == null) return
+		const name = (raw.trim() || defaultName).trim() || defaultName
+		const preset = {
+			id: `preset-${Date.now()}`,
+			name,
+			mode,
+			radiiPx: { ...radiiPx },
+			radiiPct: { ...radiiPct },
+			units: { ...units },
+		}
+		setUserPresets(prev => [...prev, preset])
+	}, [userPresets.length, mode, radiiPx, radiiPct, units])
+
+	const deleteUserPreset = useCallback((id, e) => {
+		e.preventDefault()
+		e.stopPropagation()
+		setUserPresets(prev => prev.filter(p => p.id !== id))
 	}, [])
 
 	const computedState = (() => {
@@ -655,18 +703,55 @@ function App() {
 				</div>
 				</div>
 
-				<div className="w-full flex items-center justify-between gap-4 mt-6 flex-wrap">
+				<div className="w-full flex flex-col gap-3 mt-6">
 					<div className="flex items-center gap-2 flex-wrap">
 						<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presets</span>
-						<div className="flex gap-1 flex-wrap">
+						<div className="flex gap-3 flex-wrap">
 							{PRESETS.map(preset => (
 								<button
 									key={preset.name}
+									type="button"
 									onClick={() => applyPreset(preset)}
 									className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all"
 								>
 									{preset.name}
 								</button>
+							))}
+						</div>
+					</div>
+					<div className="flex items-center gap-2 flex-wrap">
+						<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">User presets</span>
+						<button
+							type="button"
+							onClick={saveCurrentAsPreset}
+							className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all inline-flex items-center gap-1.5"
+							aria-label="Save current settings as preset"
+						>
+							<Save size={14} />
+							Save
+						</button>
+						<div className="flex gap-3 flex-wrap">
+							{userPresets.map(preset => (
+								<div
+									key={preset.id}
+									className="group relative inline-flex mr-4"
+								>
+									<button
+										type="button"
+										onClick={() => applyPreset(preset)}
+										className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all pr-7"
+									>
+										{preset.name}
+									</button>
+									<button
+										type="button"
+										onClick={(e) => deleteUserPreset(preset.id, e)}
+										className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+										aria-label={`Delete preset ${preset.name}`}
+									>
+										<X size={12} strokeWidth={2.5} />
+									</button>
+								</div>
 							))}
 						</div>
 					</div>
