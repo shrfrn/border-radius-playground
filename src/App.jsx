@@ -434,17 +434,20 @@ function CssRuleDisplay({ borderRadiusString }) {
 
 // --- Main App Component ---
 
+const INITIAL_RADII_48 = { tl: [48, 48], tr: [48, 48], br: [48, 48], bl: [48, 48] }
+const INITIAL_LINKED_ALL = { tl: true, tr: true, br: true, bl: true }
+
 function getInitialState() {
 	const saved = loadState()
 	if (saved) return saved
 	return {
-		radiiPx: { ...DEFAULT_RADII_PX, ...INITIAL_RADII_PX },
-		radiiPct: { ...DEFAULT_RADII_PCT, ...INITIAL_RADII_PCT },
-		units: { ...DEFAULT_UNITS, ...INITIAL_UNITS },
-		linked: { ...DEFAULT_LINKED },
-		mode: 4,
+		radiiPx: { ...DEFAULT_RADII_PX, ...INITIAL_RADII_48 },
+		radiiPct: { ...DEFAULT_RADII_PCT, ...INITIAL_RADII_48 },
+		units: { ...DEFAULT_UNITS, tl: ['px', 'px'], tr: ['px', 'px'], br: ['px', 'px'], bl: ['px', 'px'] },
+		linked: { ...DEFAULT_LINKED, ...INITIAL_LINKED_ALL },
+		mode: 1,
 		shape: 'rectangle',
-		overlayCorners: { tl: true, tr: true, br: true, bl: true },
+		overlayCorners: { tl: true, tr: false, br: false, bl: false },
 	}
 }
 
