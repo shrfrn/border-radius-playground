@@ -728,7 +728,7 @@ function App() {
 									key={corner}
 									type="button"
 									onClick={() => toggleOverlay(corner)}
-									className={`absolute ${pos} p-2 rounded-full transition-colors shadow-md z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${overlayCorners[corner] ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
+									className={`absolute ${pos} p-2 rounded-full transition-colors border shadow-sm z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${overlayCorners[corner] ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
 									title={overlayCorners[corner] ? 'Hide corner curve' : 'Show corner curve'}
 								>
 									<DraftingCompass size={16} />
@@ -741,7 +741,7 @@ function App() {
 								<button
 									type="button"
 									onClick={toggleAllOverlays}
-									className={`absolute -top-[45px] left-[13px] flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors shadow-md z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${allOn ? 'bg-indigo-600 text-white border-2 border-indigo-700 hover:bg-indigo-500 hover:border-indigo-600 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
+									className={`absolute -top-[45px] left-[13px] flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors border shadow-sm z-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${allOn ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-500 focus-visible:ring-4 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-indigo-500 focus-visible:ring-offset-white'}`}
 									title={allOn ? 'Hide all corner curves' : 'Show all corner curves'}
 								>
 									<DraftingCompass size={16} />
