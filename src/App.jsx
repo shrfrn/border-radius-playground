@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { Link as LinkIcon, Unlink, DraftingCompass, Copy, Check, X, Save } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
@@ -441,6 +441,9 @@ function App() {
 	const [shape, setShape] = useState(initial.shape)
 	const [overlayCorners, setOverlayCorners] = useState({ tl: true, tr: true, br: true, bl: true })
 	const [userPresets, setUserPresets] = useState(loadUserPresets)
+	const [showSavePresetForm, setShowSavePresetForm] = useState(false)
+	const [savePresetName, setSavePresetName] = useState('')
+	const savePresetInputRef = useRef(null)
 
 	const toggleOverlay = useCallback((corner) => {
 		setOverlayCorners(prev => ({ ...prev, [corner]: !prev[corner] }))
@@ -468,11 +471,22 @@ function App() {
 		setMode(preset.mode ?? 4)
 	}, [])
 
-	const saveCurrentAsPreset = useCallback(() => {
+	const openSavePresetForm = useCallback(() => {
+		setSavePresetName(`Preset ${userPresets.length + 1}`)
+		setShowSavePresetForm(true)
+	}, [userPresets.length])
+
+	useEffect(() => {
+		if (showSavePresetForm && savePresetInputRef.current) {
+			savePresetInputRef.current.focus()
+			savePresetInputRef.current.select()
+		}
+	}, [showSavePresetForm])
+
+	const submitSavePreset = useCallback((e) => {
+		e?.preventDefault()
 		const defaultName = `Preset ${userPresets.length + 1}`
-		const raw = window.prompt('Name for preset:', defaultName)
-		if (raw == null) return
-		const name = (raw.trim() || defaultName).trim() || defaultName
+		const name = (savePresetName.trim() || defaultName).trim() || defaultName
 		const preset = {
 			id: `preset-${Date.now()}`,
 			name,
@@ -482,7 +496,14 @@ function App() {
 			units: { ...units },
 		}
 		setUserPresets(prev => [...prev, preset])
-	}, [userPresets.length, mode, radiiPx, radiiPct, units])
+		setShowSavePresetForm(false)
+		setSavePresetName('')
+	}, [userPresets.length, savePresetName, mode, radiiPx, radiiPct, units])
+
+	const cancelSavePreset = useCallback(() => {
+		setShowSavePresetForm(false)
+		setSavePresetName('')
+	}, [])
 
 	const deleteUserPreset = useCallback((id, e) => {
 		e.preventDefault()
@@ -721,20 +742,49 @@ function App() {
 					</div>
 					<div className="flex items-center gap-2 flex-wrap">
 						<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">User presets</span>
-						<button
-							type="button"
-							onClick={saveCurrentAsPreset}
-							className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all inline-flex items-center gap-1.5"
-							aria-label="Save current settings as preset"
-						>
-							<Save size={14} />
-							Save
-						</button>
+						{showSavePresetForm ? (
+							<form onSubmit={submitSavePreset} className="flex items-center gap-2 flex-wrap">
+								<input
+									ref={savePresetInputRef}
+									type="text"
+									value={savePresetName}
+									onChange={(e) => setSavePresetName(e.target.value)}
+									onKeyDown={(e) => { if (e.key === 'Escape') cancelSavePreset() }}
+									className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white border border-slate-200 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:border-indigo-300 w-32"
+									placeholder="Preset name"
+									aria-label="Preset name"
+								/>
+								<button
+									type="submit"
+									className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
+								>
+									<Save size={14} />
+									Save
+								</button>
+								<button
+									type="button"
+									onClick={cancelSavePreset}
+									className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
+								>
+									Cancel
+								</button>
+							</form>
+						) : (
+							<button
+								type="button"
+								onClick={openSavePresetForm}
+								className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all inline-flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
+								aria-label="Save current settings as preset"
+							>
+								<Save size={14} />
+								Save
+							</button>
+						)}
 						<div className="flex gap-3 flex-wrap">
 							{userPresets.map(preset => (
 								<div
 									key={preset.id}
-									className="group relative inline-flex mr-4"
+									className="group relative inline-flex"
 								>
 									<button
 										type="button"
