@@ -112,8 +112,8 @@ function loadUserPresets() {
 		const data = JSON.parse(raw)
 		if (!Array.isArray(data)) return []
 		const corners = ['tl', 'tr', 'br', 'bl']
-		const has = (o, k) => o && typeof o === 'object' && Array.isArray(o[k])
-		return data.filter(p => p && p.id && p.name && typeof p.mode === 'number' && has(p, 'radiiPx') && has(p, 'radiiPct') && has(p, 'units'))
+		const hasCornerArrays = (o) => o && typeof o === 'object' && corners.every(c => Array.isArray(o[c]))
+		return data.filter(p => p && p.id && p.name && typeof p.mode === 'number' && hasCornerArrays(p.radiiPx) && hasCornerArrays(p.radiiPct) && hasCornerArrays(p.units))
 	} catch {
 		return []
 	}
@@ -123,6 +123,17 @@ function saveUserPresets(presets) {
 	try {
 		localStorage.setItem(USER_PRESETS_STORAGE_KEY, JSON.stringify(presets))
 	} catch (_) {}
+}
+
+function getNextPresetNumber(presets) {
+	const used = new Set()
+	for (const p of presets) {
+		const m = p.name && String(p.name).match(/^Preset\s*(\d+)$/i)
+		if (m) used.add(parseInt(m[1], 10))
+	}
+	let n = 1
+	while (used.has(n)) n++
+	return n
 }
 
 const INITIAL_RADII_PX = { tl: [90, 120], tr: [349, 153], br: [203, 151], bl: [173, 173] }
@@ -473,9 +484,9 @@ function App() {
 	}, [])
 
 	const openSavePresetForm = useCallback(() => {
-		setSavePresetName(`Preset ${userPresets.length + 1}`)
+		setSavePresetName(`Preset ${getNextPresetNumber(userPresets)}`)
 		setShowSavePresetForm(true)
-	}, [userPresets.length])
+	}, [userPresets])
 
 	useEffect(() => {
 		if (showSavePresetForm && savePresetInputRef.current) {
@@ -486,7 +497,7 @@ function App() {
 
 	const submitSavePreset = useCallback((e) => {
 		e?.preventDefault()
-		const defaultName = `Preset ${userPresets.length + 1}`
+		const defaultName = `Preset ${getNextPresetNumber(userPresets)}`
 		const name = (savePresetName.trim() || defaultName).trim() || defaultName
 		const preset = {
 			id: `preset-${Date.now()}`,
@@ -499,7 +510,7 @@ function App() {
 		setUserPresets(prev => [...prev, preset])
 		setShowSavePresetForm(false)
 		setSavePresetName('')
-	}, [userPresets.length, savePresetName, mode, radiiPx, radiiPct, units])
+	}, [userPresets, savePresetName, mode, radiiPx, radiiPct, units])
 
 	const cancelSavePreset = useCallback(() => {
 		setShowSavePresetForm(false)
@@ -640,7 +651,7 @@ function App() {
 					<h1 className="text-2xl font-black text-slate-900 tracking-tight">
 						CSS Border Radius
 					</h1>
-					<div className="flex gap-1 flex-wrap justify-center">
+					<div className="flex gap-2 flex-wrap justify-center">
 						{['rectangle', 'square'].map(s => (
 							<button
 								key={s}
@@ -658,7 +669,7 @@ function App() {
 							</button>
 						))}
 					</div>
-					<div className="flex gap-1 flex-wrap justify-end">
+					<div className="flex gap-2 flex-wrap justify-end">
 						{[1, 2, 3, 4].map(v => (
 							<button
 								key={v}
@@ -737,7 +748,7 @@ function App() {
 				<div className="w-full flex flex-col gap-3 mt-6">
 					<div className="flex items-center gap-2 flex-wrap">
 						<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presets</span>
-						<div className="flex gap-3 flex-wrap">
+						<div className="flex gap-2 flex-wrap">
 							{PRESETS.map(preset => (
 								<button
 									key={preset.name}
@@ -790,26 +801,27 @@ function App() {
 								Save
 							</button>
 						)}
-						<div className="flex gap-3 flex-wrap">
+						<span className="text-slate-300 font-bold select-none" aria-hidden="true">|</span>
+						<div className="flex gap-2 flex-wrap">
 							{userPresets.map(preset => (
 								<div
 									key={preset.id}
 									className="group relative inline-flex"
 								>
 									{presetIdConfirmDelete === preset.id ? (
-										<div className="h-7 px-3 rounded-lg text-xs font-bold bg-white border border-slate-200 shadow-sm inline-flex items-center gap-2 leading-none">
-											<span className="text-slate-600">Delete?</span>
+										<div className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white border border-slate-200 shadow-sm inline-flex items-center gap-2 leading-none">
+											<span className="text-slate-600 leading-none">Delete?</span>
 											<button
 												type="button"
 												onClick={() => confirmDeleteUserPreset(preset.id)}
-												className="h-6 px-2 rounded text-[10px] font-bold leading-none bg-red-500 text-white hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
+												className="h-4 px-2 py-0 rounded text-[10px] font-bold leading-none flex items-center bg-red-500 text-white hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
 											>
 												OK
 											</button>
 											<button
 												type="button"
 												onClick={cancelDeleteUserPreset}
-												className="h-6 px-2 rounded text-[10px] font-bold leading-none text-slate-600 bg-slate-100 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
+												className="h-4 px-2 py-0 rounded text-[10px] font-bold leading-none flex items-center text-slate-600 bg-slate-100 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
 											>
 												Cancel
 											</button>
@@ -819,7 +831,7 @@ function App() {
 											<button
 												type="button"
 												onClick={() => applyPreset(preset)}
-												className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all pr-7"
+												className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all"
 											>
 												{preset.name}
 											</button>
