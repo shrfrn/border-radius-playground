@@ -557,14 +557,33 @@ function App() {
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-4 md:p-8 flex flex-col items-center">
 			<div className="w-full max-w-5xl flex flex-col mb-8">
-				<div className="w-full flex items-center justify-between mb-6">
+				<div className="w-full grid grid-cols-3 items-center gap-4 mb-6">
 					<h1 className="text-2xl font-black text-slate-900 tracking-tight">
 						CSS Border Radius
 					</h1>
-					<div className="flex gap-1 flex-wrap">
+					<div className="flex gap-1 flex-wrap justify-center">
+						{['rectangle', 'square'].map(s => (
+							<button
+								key={s}
+								type="button"
+								onClick={() => setShape(s)}
+								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all capitalize ${
+									shape === s
+										? 'bg-indigo-600 text-white border-indigo-600'
+										: 'text-slate-600 bg-white border-slate-200 hover:bg-indigo-50 hover:border-indigo-200'
+								}`}
+								aria-pressed={shape === s}
+								aria-label={`Shape: ${s}`}
+							>
+								{s}
+							</button>
+						))}
+					</div>
+					<div className="flex gap-1 flex-wrap justify-end">
 						{[1, 2, 3, 4].map(v => (
 							<button
 								key={v}
+								type="button"
 								onClick={() => setMode(v)}
 								className={`px-3 py-1.5 rounded-lg text-xs font-bold border shadow-sm transition-all ${
 									mode === v
@@ -637,19 +656,6 @@ function App() {
 				</div>
 
 				<div className="w-full flex items-center justify-between gap-4 mt-6 flex-wrap">
-					<div className="bg-white p-1 rounded-xl border border-slate-200 shadow-sm flex gap-1">
-						{['rectangle', 'square'].map(s => (
-							<button
-								key={s}
-								onClick={() => setShape(s)}
-								className={`px-4 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
-									shape === s ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
-								}`}
-							>
-								{s}
-							</button>
-						))}
-					</div>
 					<div className="flex items-center gap-2 flex-wrap">
 						<span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presets</span>
 						<div className="flex gap-1 flex-wrap">
