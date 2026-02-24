@@ -444,6 +444,7 @@ function App() {
 	const [showSavePresetForm, setShowSavePresetForm] = useState(false)
 	const [savePresetName, setSavePresetName] = useState('')
 	const savePresetInputRef = useRef(null)
+	const [presetIdConfirmDelete, setPresetIdConfirmDelete] = useState(null)
 
 	const toggleOverlay = useCallback((corner) => {
 		setOverlayCorners(prev => ({ ...prev, [corner]: !prev[corner] }))
@@ -505,10 +506,19 @@ function App() {
 		setSavePresetName('')
 	}, [])
 
-	const deleteUserPreset = useCallback((id, e) => {
+	const requestDeleteUserPreset = useCallback((id, e) => {
 		e.preventDefault()
 		e.stopPropagation()
+		setPresetIdConfirmDelete(id)
+	}, [])
+
+	const confirmDeleteUserPreset = useCallback((id) => {
 		setUserPresets(prev => prev.filter(p => p.id !== id))
+		setPresetIdConfirmDelete(null)
+	}, [])
+
+	const cancelDeleteUserPreset = useCallback(() => {
+		setPresetIdConfirmDelete(null)
 	}, [])
 
 	const computedState = (() => {
@@ -786,21 +796,43 @@ function App() {
 									key={preset.id}
 									className="group relative inline-flex"
 								>
-									<button
-										type="button"
-										onClick={() => applyPreset(preset)}
-										className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all pr-7"
-									>
-										{preset.name}
-									</button>
-									<button
-										type="button"
-										onClick={(e) => deleteUserPreset(preset.id, e)}
-										className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-										aria-label={`Delete preset ${preset.name}`}
-									>
-										<X size={12} strokeWidth={2.5} />
-									</button>
+									{presetIdConfirmDelete === preset.id ? (
+										<div className="h-7 px-3 rounded-lg text-xs font-bold bg-white border border-slate-200 shadow-sm inline-flex items-center gap-2 leading-none">
+											<span className="text-slate-600">Delete?</span>
+											<button
+												type="button"
+												onClick={() => confirmDeleteUserPreset(preset.id)}
+												className="h-6 px-2 rounded text-[10px] font-bold leading-none bg-red-500 text-white hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
+											>
+												OK
+											</button>
+											<button
+												type="button"
+												onClick={cancelDeleteUserPreset}
+												className="h-6 px-2 rounded text-[10px] font-bold leading-none text-slate-600 bg-slate-100 hover:bg-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-1"
+											>
+												Cancel
+											</button>
+										</div>
+									) : (
+										<>
+											<button
+												type="button"
+												onClick={() => applyPreset(preset)}
+												className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 shadow-sm hover:bg-indigo-50 hover:border-indigo-200 transition-all pr-7"
+											>
+												{preset.name}
+											</button>
+											<button
+												type="button"
+												onClick={(e) => requestDeleteUserPreset(preset.id, e)}
+												className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-5 h-5 rounded-full bg-slate-700 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-500 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+												aria-label={`Delete preset ${preset.name}`}
+											>
+												<X size={12} strokeWidth={2.5} />
+											</button>
+										</>
+									)}
 								</div>
 							))}
 						</div>
