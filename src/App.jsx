@@ -150,6 +150,10 @@ function loadState() {
 		if (!data.radiiPx || !corners.every(c => has(data.radiiPx, c))) return null
 		if (!data.radiiPct || !corners.every(c => has(data.radiiPct, c))) return null
 		if (!data.units || !corners.every(c => has(data.units, c))) return null
+		const defaultOverlay = { tl: true, tr: true, br: true, bl: true }
+		const overlayCorners = data.overlayCorners && typeof data.overlayCorners === 'object' && corners.every(c => typeof data.overlayCorners[c] === 'boolean')
+			? { ...defaultOverlay, ...data.overlayCorners }
+			: defaultOverlay
 		return {
 			radiiPx: { ...DEFAULT_RADII_PX, ...data.radiiPx },
 			radiiPct: { ...DEFAULT_RADII_PCT, ...data.radiiPct },
@@ -157,6 +161,7 @@ function loadState() {
 			linked: { ...DEFAULT_LINKED, ...data.linked },
 			mode: typeof data.mode === 'number' && data.mode >= 1 && data.mode <= 4 ? data.mode : 4,
 			shape: data.shape === 'square' ? 'square' : 'rectangle',
+			overlayCorners,
 		}
 	} catch {
 		return null
@@ -439,6 +444,7 @@ function getInitialState() {
 		linked: { ...DEFAULT_LINKED },
 		mode: 4,
 		shape: 'rectangle',
+		overlayCorners: { tl: true, tr: true, br: true, bl: true },
 	}
 }
 
@@ -450,7 +456,7 @@ function App() {
 	const [units, setUnits] = useState(initial.units)
 	const [linked, setLinked] = useState(initial.linked)
 	const [shape, setShape] = useState(initial.shape)
-	const [overlayCorners, setOverlayCorners] = useState({ tl: true, tr: true, br: true, bl: true })
+	const [overlayCorners, setOverlayCorners] = useState(initial.overlayCorners)
 	const [userPresets, setUserPresets] = useState(loadUserPresets)
 	const [showSavePresetForm, setShowSavePresetForm] = useState(false)
 	const [savePresetName, setSavePresetName] = useState('')
@@ -467,8 +473,8 @@ function App() {
 	}, [overlayCorners])
 
 	useEffect(() => {
-		saveState({ radiiPx, radiiPct, units, linked, mode, shape })
-	}, [radiiPx, radiiPct, units, linked, mode, shape])
+		saveState({ radiiPx, radiiPct, units, linked, mode, shape, overlayCorners })
+	}, [radiiPx, radiiPct, units, linked, mode, shape, overlayCorners])
 
 	useEffect(() => {
 		saveUserPresets(userPresets)
@@ -481,6 +487,7 @@ function App() {
 		setRadiiPct({ ...DEFAULT_RADII_PCT, ...preset.radiiPct })
 		setUnits({ ...DEFAULT_UNITS, ...preset.units })
 		setMode(preset.mode ?? 4)
+		setShape(preset.shape === 'square' ? 'square' : 'rectangle')
 	}, [])
 
 	const openSavePresetForm = useCallback(() => {
@@ -503,6 +510,7 @@ function App() {
 			id: `preset-${Date.now()}`,
 			name,
 			mode,
+			shape: shape === 'square' ? 'square' : 'rectangle',
 			radiiPx: { ...radiiPx },
 			radiiPct: { ...radiiPct },
 			units: { ...units },
@@ -510,7 +518,7 @@ function App() {
 		setUserPresets(prev => [...prev, preset])
 		setShowSavePresetForm(false)
 		setSavePresetName('')
-	}, [userPresets, savePresetName, mode, radiiPx, radiiPct, units])
+	}, [userPresets, savePresetName, mode, shape, radiiPx, radiiPct, units])
 
 	const cancelSavePreset = useCallback(() => {
 		setShowSavePresetForm(false)
