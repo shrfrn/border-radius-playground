@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Link as LinkIcon, Unlink } from 'lucide-react'
+import { Link as LinkIcon, Unlink, DraftingCompass } from 'lucide-react'
 
 // --- Sub-components moved outside to prevent remounting/focus loss ---
 
@@ -161,6 +161,63 @@ function getDisplayRadii(radiiPx, radiiPct, units) {
 	return out
 }
 
+function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl: true, tr: true, br: true, bl: true } }) {
+	const toPx = (val, unit, dim) => (unit === '%' ? (val / 100) * dim : val)
+	const isSquare = width === height
+	const getCornerData = c => {
+		const r = radii[c] ?? [0, 0]
+		const u = units[c] ?? ['px', 'px']
+		const hPx = toPx(r[0], u[0], width)
+		const vPx = toPx(r[1], u[1], height)
+		const hLabel = `${r[0]}${u[0]}`
+		const vLabel = `${r[1]}${u[1]}`
+		const sameVal = r[0] === r[1] && u[0] === u[1]
+		return { hPx, vPx, hLabel, vLabel, showBothRadii: sameVal && !isSquare }
+	}
+
+	const strokeColor = 'rgba(255,255,255,0.9)'
+	const fillColor = 'rgba(255,255,255,0.15)'
+	const vLabelGap = 14 // fixed gap between vertical radius line and label (edge-to-edge)
+
+	const cornerConfig = [
+		{ c: 'tl', cx: d => d.hPx, cy: d => d.vPx, hLine: d => ({ x1: d.hPx, y1: d.vPx, x2: 0, y2: d.vPx }), vLine: d => ({ x1: d.hPx, y1: d.vPx, x2: d.hPx, y2: 0 }), hLabel: d => ({ x: d.hPx / 2, y: d.vPx - 6 }), vLabel: d => ({ x: d.hPx + vLabelGap, y: d.vPx / 2, anchor: 'start' }) },
+		{ c: 'tr', cx: d => width - d.hPx, cy: d => d.vPx, hLine: d => ({ x1: width - d.hPx, y1: d.vPx, x2: width, y2: d.vPx }), vLine: d => ({ x1: width - d.hPx, y1: d.vPx, x2: width - d.hPx, y2: 0 }), hLabel: d => ({ x: width - d.hPx / 2, y: d.vPx - 6 }), vLabel: d => ({ x: width - d.hPx - vLabelGap, y: d.vPx / 2, anchor: 'end' }) },
+		{ c: 'br', cx: d => width - d.hPx, cy: d => height - d.vPx, hLine: d => ({ x1: width - d.hPx, y1: height - d.vPx, x2: width, y2: height - d.vPx }), vLine: d => ({ x1: width - d.hPx, y1: height - d.vPx, x2: width - d.hPx, y2: height }), hLabel: d => ({ x: width - d.hPx / 2, y: height - d.vPx + 14 }), vLabel: d => ({ x: width - d.hPx - vLabelGap, y: height - d.vPx / 2, anchor: 'end' }) },
+		{ c: 'bl', cx: d => d.hPx, cy: d => height - d.vPx, hLine: d => ({ x1: d.hPx, y1: height - d.vPx, x2: 0, y2: height - d.vPx }), vLine: d => ({ x1: d.hPx, y1: height - d.vPx, x2: d.hPx, y2: height }), hLabel: d => ({ x: d.hPx / 2, y: height - d.vPx + 14 }), vLabel: d => ({ x: d.hPx + vLabelGap, y: height - d.vPx / 2, anchor: 'start' }) },
+	]
+
+	return (
+		<svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+			{cornerConfig.map(({ c, cx, cy, hLine, vLine, hLabel, vLabel }) => {
+				if (!visibleCorners[c]) return null
+				const d = getCornerData(c)
+				if (d.hPx <= 0 && d.vPx <= 0) return null
+				const hl = hLine(d)
+				const vl = vLine(d)
+				const hPos = hLabel(d)
+				const vPos = vLabel(d)
+				return (
+					<g key={c}>
+						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+						{d.hPx > 0 && (d.showBothRadii || d.hPx !== d.vPx) && (
+							<>
+								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={strokeColor} strokeWidth={1} />
+								<text x={hPos.x} y={hPos.y} textAnchor="middle" fill={strokeColor} fontSize={10} fontFamily="monospace" fontWeight="bold">{d.hLabel}</text>
+							</>
+						)}
+						{d.vPx > 0 && (d.showBothRadii || d.hPx !== d.vPx || isSquare) && (
+							<>
+								<line x1={vl.x1} y1={vl.y1} x2={vl.x2} y2={vl.y2} stroke={strokeColor} strokeWidth={1} />
+								<text x={vPos.x} y={vPos.y} textAnchor={vPos.anchor ?? 'middle'} fill={strokeColor} fontSize={10} fontFamily="monospace" fontWeight="bold">{d.vLabel}</text>
+							</>
+						)}
+					</g>
+				)
+			})}
+		</svg>
+	)
+}
+
 function CssRuleDisplay({ borderRadiusString }) {
 	const hasSlash = borderRadiusString.includes(' / ')
 	const parts = hasSlash ? borderRadiusString.split(' / ') : null
@@ -225,6 +282,16 @@ function App() {
 	const [units, setUnits] = useState(initial.units)
 	const [linked, setLinked] = useState(initial.linked)
 	const [shape, setShape] = useState(initial.shape)
+	const [overlayCorners, setOverlayCorners] = useState({ tl: true, tr: true, br: true, bl: true })
+
+	const toggleOverlay = useCallback((corner) => {
+		setOverlayCorners(prev => ({ ...prev, [corner]: !prev[corner] }))
+	}, [])
+
+	const toggleAllOverlays = useCallback(() => {
+		const allOn = ['tl', 'tr', 'br', 'bl'].every(c => overlayCorners[c])
+		setOverlayCorners({ tl: !allOn, tr: !allOn, br: !allOn, bl: !allOn })
+	}, [overlayCorners])
 
 	useEffect(() => {
 		saveState({ radiiPx, radiiPct, units, linked, mode, shape })
@@ -247,27 +314,31 @@ function App() {
 		let finalRadii = {}
 		let finalUnits = { ...u }
 		;['tl', 'tr', 'br', 'bl'].forEach(c => {
-			const unit = u[c]?.[0] ?? 'px'
-			const val0 = unit === '%' ? (pct[c]?.[0] ?? 0) : (px[c]?.[0] ?? 0)
-			const val1 = unit === '%' ? (pct[c]?.[1] ?? 0) : (px[c]?.[1] ?? 0)
+			const unit0 = u[c]?.[0] ?? 'px'
+			const unit1 = u[c]?.[1] ?? 'px'
+			const val0 = unit0 === '%' ? (pct[c]?.[0] ?? 0) : (px[c]?.[0] ?? 0)
+			const val1 = unit1 === '%' ? (pct[c]?.[1] ?? 0) : (px[c]?.[1] ?? 0)
 			finalRadii[c] = l[c] ? [val0, val0] : [val0, val1]
-			if (l[c]) finalUnits[c] = [unit, unit]
+			if (l[c]) finalUnits[c] = [unit0, unit0]
+			else finalUnits[c] = [unit0, unit1]
 		})
 
 		const tl = finalRadii?.tl ?? [0, 0]
 		const tr = finalRadii?.tr ?? [0, 0]
-		const tlUnit = finalUnits?.tl?.[0] ?? 'px'
-		const trUnit = finalUnits?.tr?.[0] ?? 'px'
+		const tlUnitH = finalUnits?.tl?.[0] ?? 'px'
+		const tlUnitV = finalUnits?.tl?.[1] ?? 'px'
+		const trUnitH = finalUnits?.tr?.[0] ?? 'px'
+		const trUnitV = finalUnits?.tr?.[1] ?? 'px'
 
 		if (mode === 1) {
 			finalRadii = { tl, tr: [...tl], br: [...tl], bl: [...tl] }
-			finalUnits = { tl: [tlUnit, tlUnit], tr: [tlUnit, tlUnit], br: [tlUnit, tlUnit], bl: [tlUnit, tlUnit] }
+			finalUnits = { tl: [tlUnitH, tlUnitV], tr: [tlUnitH, tlUnitV], br: [tlUnitH, tlUnitV], bl: [tlUnitH, tlUnitV] }
 		} else if (mode === 2) {
 			finalRadii = { ...finalRadii, br: [...tl], bl: [...tr] }
-			finalUnits = { ...finalUnits, br: [tlUnit, tlUnit], bl: [trUnit, trUnit] }
+			finalUnits = { ...finalUnits, br: [tlUnitH, tlUnitV], bl: [trUnitH, trUnitV] }
 		} else if (mode === 3) {
 			finalRadii = { ...finalRadii, bl: [...tr] }
-			finalUnits = { ...finalUnits, bl: [trUnit, trUnit] }
+			finalUnits = { ...finalUnits, bl: [trUnitH, trUnitV] }
 		}
 
 		return { radii: finalRadii, units: finalUnits }
@@ -377,15 +448,54 @@ function App() {
 				<CornerControls corner="br" label="Bottom Right" positionClass="-bottom-4 -right-12 lg:-right-20" isVisible={mode >= 3} radii={displayRadii} units={units} linked={linked} onUpdate={updateRadius} onToggleUnit={toggleUnit} onToggleLink={toggleLink} />
 				<CornerControls corner="bl" label="Bottom Left" positionClass="-bottom-4 -left-12 lg:-left-20" isVisible={mode >= 4} radii={displayRadii} units={units} linked={linked} onUpdate={updateRadius} onToggleUnit={toggleUnit} onToggleLink={toggleLink} />
 
-				<div className={`relative border border-slate-200 flex items-center justify-center bg-white shadow-inner overflow-hidden transition-all duration-300 ease-out ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
-					<div
-						className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl transition-all duration-300 ease-out flex flex-col items-center justify-center p-6 text-white overflow-hidden text-center relative"
-						style={{ borderRadius: borderRadiusString }}
-					>
-						<div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-						<div className="z-10 bg-black/30 backdrop-blur-lg px-6 py-4 rounded-2xl border border-white/20 max-w-[85%]">
-							<CssRuleDisplay borderRadiusString={borderRadiusString} />
+				<div className={`flex flex-col items-center gap-0 transition-all duration-300 ease-out ${shape === 'square' ? 'w-[320px]' : 'w-[500px]'}`}>
+					<div className={`relative transition-all duration-300 ease-out ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
+						<div className={`absolute inset-0 border border-slate-200 flex items-center justify-center bg-white shadow-inner overflow-hidden rounded-none ${shape === 'square' ? 'w-[320px] h-[320px]' : 'w-[500px] h-[300px]'}`}>
+							<div
+								className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-2xl transition-all duration-300 ease-out relative overflow-hidden"
+								style={{ borderRadius: borderRadiusString }}
+							>
+								<div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+								<CornerRadiiOverlay
+									width={shape === 'square' ? 320 : 500}
+									height={shape === 'square' ? 320 : 300}
+									radii={computedState.radii}
+									units={computedState.units}
+									visibleCorners={overlayCorners}
+								/>
+							</div>
 						</div>
+						{['tl', 'tr', 'br', 'bl'].map(corner => {
+							const pos = { tl: '-top-[40px] -left-[40px]', tr: '-top-[40px] -right-[40px]', br: '-bottom-[40px] -right-[40px]', bl: '-bottom-[40px] -left-[40px]' }[corner]
+							return (
+								<button
+									key={corner}
+									type="button"
+									onClick={() => toggleOverlay(corner)}
+									className={`absolute ${pos} p-2 rounded-full transition-colors shadow-md z-10 ${overlayCorners[corner] ? 'bg-indigo-600 text-white border-2 border-indigo-700' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
+									title={overlayCorners[corner] ? 'Hide corner curve' : 'Show corner curve'}
+								>
+									<DraftingCompass size={16} />
+								</button>
+							)
+						})}
+						{(() => {
+							const allOn = ['tl', 'tr', 'br', 'bl'].every(c => overlayCorners[c])
+							return (
+								<button
+									type="button"
+									onClick={toggleAllOverlays}
+									className={`absolute -top-[40px] left-[8px] flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors shadow-md z-10 ${allOn ? 'bg-indigo-600 text-white border-2 border-indigo-700' : 'bg-white text-slate-600 border-2 border-slate-300 hover:bg-slate-50 hover:border-slate-400'}`}
+									title={allOn ? 'Hide all corner curves' : 'Show all corner curves'}
+								>
+									<DraftingCompass size={16} />
+									<span className="text-xs font-bold uppercase tracking-wide">all</span>
+								</button>
+							)
+						})()}
+					</div>
+					<div className="w-full mt-14 bg-slate-900 rounded-xl px-5 py-4 border border-slate-700 shadow-lg">
+						<CssRuleDisplay borderRadiusString={borderRadiusString} />
 					</div>
 				</div>
 				</div>
