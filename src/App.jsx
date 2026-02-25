@@ -198,7 +198,8 @@ function getDisplayRadii(radiiPx, radiiPct, units) {
 	return out
 }
 
-const OVERLAY_ACCENT = '#00e5ff'
+const OVERLAY_H = '#00e5ff'   // horizontal axis (radius, width)
+const OVERLAY_V = '#f59e0b'   // vertical axis (radius, height)
 const OVERLAY_DEFAULT_STROKE = 'rgba(255,255,255,0.9)'
 const OVERLAY_DEFAULT_FILL = 'rgba(255,255,255,0.15)'
 const RADII_FONT_SIZE = 14
@@ -255,8 +256,8 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 	}
 
 	function renderSideDimension(side) {
-		const stroke = OVERLAY_ACCENT
 		const isHoriz = side.type === 'top' || side.type === 'bottom'
+		const stroke = isHoriz ? OVERLAY_H : OVERLAY_V
 		const half = DIM_LINE_GAP / 2
 		if (isHoriz) {
 			return (
@@ -307,8 +308,10 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 				const hPos = hLabel(d)
 				const vPos = vLabel(d)
 				const isHovered = hoveredCorner === c
-				const strokeColor = isHovered ? OVERLAY_ACCENT : OVERLAY_DEFAULT_STROKE
-				const fillColor = isHovered ? 'rgba(0,229,255,0.12)' : OVERLAY_DEFAULT_FILL
+				const hColor = isHovered ? OVERLAY_H : 'rgba(0,229,255,0.75)'
+				const vColor = isHovered ? OVERLAY_V : 'rgba(245,158,11,0.85)'
+				const ellipseStroke = isHovered ? OVERLAY_H : OVERLAY_DEFAULT_STROKE
+				const fillColor = isHovered ? 'rgba(0,229,255,0.08)' : OVERLAY_DEFAULT_FILL
 				return (
 					<g
 						key={c}
@@ -316,17 +319,17 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 						onMouseEnter={() => setHoveredCorner(c)}
 						onMouseLeave={() => setHoveredCorner(null)}
 					>
-						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={fillColor} stroke={strokeColor} strokeWidth={1.5} />
+						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={fillColor} stroke={ellipseStroke} strokeWidth={1.5} />
 						{d.hPx > 0 && (d.showBothRadii || d.hPx !== d.vPx) && (
 							<>
-								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={strokeColor} strokeWidth={1.2} />
-								<text x={hPos.x} y={hPos.y} textAnchor="middle" fill={strokeColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.hLabel}</text>
+								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={hColor} strokeWidth={1.2} />
+								<text x={hPos.x} y={hPos.y} textAnchor="middle" fill={hColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.hLabel}</text>
 							</>
 						)}
 						{d.vPx > 0 && (d.showBothRadii || d.hPx !== d.vPx || isSquare) && (
 							<>
-								<line x1={vl.x1} y1={vl.y1} x2={vl.x2} y2={vl.y2} stroke={strokeColor} strokeWidth={1.2} />
-								<text x={vPos.x} y={vPos.y} textAnchor={vPos.anchor ?? 'middle'} fill={strokeColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.vLabel}</text>
+								<line x1={vl.x1} y1={vl.y1} x2={vl.x2} y2={vl.y2} stroke={vColor} strokeWidth={1.2} />
+								<text x={vPos.x} y={vPos.y} textAnchor={vPos.anchor ?? 'middle'} fill={vColor} fontSize={RADII_FONT_SIZE} fontFamily="monospace" fontWeight="bold">{d.vLabel}</text>
 							</>
 						)}
 					</g>
