@@ -204,7 +204,7 @@ const OVERLAY_DEFAULT_STROKE = 'rgba(255,255,255,0.9)'
 const OVERLAY_DEFAULT_FILL = 'rgba(255,255,255,0.15)'
 const RADII_FONT_SIZE = 14
 const DIM_TICK = 6
-const DIM_LINE_GAP = 32 // gap in line for centered text
+const DIM_LINE_GAP = 48 // gap in line for centered label (label fits inside, not obscured)
 
 function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl: true, tr: true, br: true, bl: true } }) {
 	const [hoveredCorner, setHoveredCorner] = useState(null)
@@ -259,6 +259,7 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 		const isHoriz = side.type === 'top' || side.type === 'bottom'
 		const stroke = isHoriz ? OVERLAY_H : OVERLAY_V
 		const half = DIM_LINE_GAP / 2
+		const labelBg = 'rgba(255,255,255,0.75)'
 		if (isHoriz) {
 			return (
 				<g key={side.type}>
@@ -266,18 +267,21 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 					<line x1={side.cx + half} y1={side.y} x2={side.x2} y2={side.y} stroke={stroke} strokeWidth={1.2} />
 					<line x1={side.x1} y1={side.y} x2={side.x1} y2={side.y + side.tickDy} stroke={stroke} strokeWidth={1.2} />
 					<line x1={side.x2} y1={side.y} x2={side.x2} y2={side.y + side.tickDy} stroke={stroke} strokeWidth={1.2} />
+					<rect x={side.cx - half} y={side.y - 7} width={DIM_LINE_GAP} height={14} fill={labelBg} />
 					<text x={side.cx} y={side.y} dy="0.35em" textAnchor="middle" fill={stroke} fontSize={11} fontFamily="monospace" fontWeight="bold">{side.label}</text>
 				</g>
 			)
 		}
+		const textX = side.textX ?? side.x
 		return (
 			<g key={side.type}>
 				<line x1={side.x} y1={side.y1} x2={side.x} y2={side.cy - half} stroke={stroke} strokeWidth={1.2} />
 				<line x1={side.x} y1={side.cy + half} x2={side.x} y2={side.y2} stroke={stroke} strokeWidth={1.2} />
 				<line x1={side.x} y1={side.y1} x2={side.x + side.tickDx} y2={side.y1} stroke={stroke} strokeWidth={1.2} />
 				<line x1={side.x} y1={side.y2} x2={side.x + side.tickDx} y2={side.y2} stroke={stroke} strokeWidth={1.2} />
+				<rect x={textX - 7} y={side.cy - half} width={14} height={DIM_LINE_GAP} fill={labelBg} />
 				<text
-					x={side.textX ?? side.x}
+					x={textX}
 					y={side.cy}
 					dy="0.35em"
 					textAnchor={side.textAnchor ?? 'middle'}
@@ -285,7 +289,7 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 					fontSize={11}
 					fontFamily="monospace"
 					fontWeight="bold"
-					transform={`rotate(-90 ${side.textX ?? side.x} ${side.cy})`}
+					transform={`rotate(-90 ${textX} ${side.cy})`}
 				>
 					{side.label}
 				</text>
@@ -295,10 +299,6 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 
 	return (
 		<svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-			{/* Side dimensions on hover – pointer-events wrapper so only corners receive hover */}
-			<g style={{ pointerEvents: 'none', opacity: hoveredCorner ? 1 : 0, transition: 'opacity 0.2s ease-out' }}>
-				{hoveredCorner && getDimSidesForCorner(hoveredCorner)?.map(renderSideDimension)}
-			</g>
 			{cornerConfig.map(({ c, cx, cy, hLine, vLine, hLabel, vLabel }) => {
 				if (!visibleCorners[c]) return null
 				const d = getCornerData(c)
@@ -308,10 +308,8 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 				const hPos = hLabel(d)
 				const vPos = vLabel(d)
 				const isHovered = hoveredCorner === c
-				const hColor = isHovered ? OVERLAY_H : 'rgba(0,229,255,0.75)'
-				const vColor = isHovered ? OVERLAY_V : 'rgba(245,158,11,0.85)'
-				const ellipseStroke = isHovered ? OVERLAY_H : OVERLAY_DEFAULT_STROKE
-				const fillColor = isHovered ? 'rgba(0,229,255,0.08)' : OVERLAY_DEFAULT_FILL
+				const hColor = isHovered ? OVERLAY_H : OVERLAY_DEFAULT_STROKE
+				const vColor = isHovered ? OVERLAY_V : OVERLAY_DEFAULT_STROKE
 				return (
 					<g
 						key={c}
@@ -319,7 +317,7 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 						onMouseEnter={() => setHoveredCorner(c)}
 						onMouseLeave={() => setHoveredCorner(null)}
 					>
-						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={fillColor} stroke={ellipseStroke} strokeWidth={1.5} />
+						<ellipse cx={cx(d)} cy={cy(d)} rx={d.hPx} ry={d.vPx} fill={OVERLAY_DEFAULT_FILL} stroke={OVERLAY_DEFAULT_STROKE} strokeWidth={1.5} />
 						{d.hPx > 0 && (d.showBothRadii || d.hPx !== d.vPx) && (
 							<>
 								<line x1={hl.x1} y1={hl.y1} x2={hl.x2} y2={hl.y2} stroke={hColor} strokeWidth={1.2} />
@@ -335,6 +333,10 @@ function CornerRadiiOverlay({ width, height, radii, units, visibleCorners = { tl
 					</g>
 				)
 			})}
+			{/* Side dimensions on hover – rendered last so labels and lines paint on top */}
+			<g style={{ pointerEvents: 'none', opacity: hoveredCorner ? 1 : 0, transition: 'opacity 0.2s ease-out' }}>
+				{hoveredCorner && getDimSidesForCorner(hoveredCorner)?.map(renderSideDimension)}
+			</g>
 		</svg>
 	)
 }
